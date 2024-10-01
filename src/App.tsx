@@ -1,22 +1,14 @@
 import './App.css';
+import '@blueprintjs/core/lib/css/blueprint.css';
+import { AppModel, AppModelContext } from './models/AppModel';
+import { Router } from './Router';
 
-import { Card } from './components/base';
-import TodoList from './components/todo/TodoList';
-import TodoListModel from './models/TodoListModel';
-import { absolute, flexCenter, fullSize, padding } from './styles';
+export const globalAppModel = new AppModel();
 
-const todoListStore = new TodoListModel();
-
-function App() {
+export const App = () => {
   return (
-    <div css={[absolute(), fullSize, flexCenter]}>
-      <Card
-        css={[{ width: 'min(90%, 400px)', height: 'min(90%, 400px)' }, padding('xl')]}
-      >
-        <TodoList store={todoListStore} />
-      </Card>
-    </div>
+    <AppModelContext.Provider value={globalAppModel}>
+      <Router />
+    </AppModelContext.Provider>
   );
-}
-
-export default App;
+};
