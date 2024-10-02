@@ -45,10 +45,12 @@ ChartJS.register(
 const zoomOptions: ZoomPluginOptions = {
   pan: {
     enabled: true,
-    modifierKey: 'shift',
   },
   zoom: {
-    drag: {
+    wheel: {
+      enabled: true,
+    },
+    pinch: {
       enabled: true,
     },
     mode: 'x',
