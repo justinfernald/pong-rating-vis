@@ -2,29 +2,66 @@ import { MenuItem } from '@blueprintjs/core';
 import { ItemRendererProps, MultiSelect } from '@blueprintjs/select';
 import { ClassNames } from '@emotion/react';
 import { observer } from 'mobx-react-lite';
+import { useCallback, useMemo } from 'react';
 
 export interface MultiPlayerSelectorProps {
-  players: string[];
-  selectedPlayers: string[];
-  setSelectedPlayers: (players: string[]) => void;
+  players: Set<string>;
+  selectedPlayers: Set<string>;
+  setSelectedPlayers: (players: Set<string>) => void;
 }
 
 export const MultiPlayerSelector = observer((props: MultiPlayerSelectorProps) => {
   const { players, selectedPlayers, setSelectedPlayers } = props;
+
+  const itemRenderer = useCallback(
+    (player: string, { handleClick, modifiers }: ItemRendererProps) => {
+      return (
+        <MenuItem
+          roleStructure="listoption"
+          key={player}
+          text={player}
+          onClick={handleClick}
+          active={modifiers.active}
+          selected={selectedPlayers.has(player)}
+        />
+      );
+    },
+    [selectedPlayers],
+  );
+
+  const playerList = useMemo(() => Array.from(players), [players]);
+  const selectedPlayersList = useMemo(
+    () => Array.from(selectedPlayers),
+    [selectedPlayers],
+  );
 
   return (
     <ClassNames>
       {({ css }) => (
         <MultiSelect
           css={[{ width: 500 }]}
-          items={players}
-          selectedItems={selectedPlayers}
+          items={playerList}
+          selectedItems={selectedPlayersList}
           itemRenderer={itemRenderer}
-          onItemSelect={(player) => setSelectedPlayers([...selectedPlayers, player])}
+          onItemSelect={(player) => {
+            const newSelectedPlayers = new Set(selectedPlayers);
+
+            if (!selectedPlayers.has(player)) {
+              newSelectedPlayers.add(player);
+            } else {
+              newSelectedPlayers.delete(player);
+            }
+
+            setSelectedPlayers(newSelectedPlayers);
+          }}
           tagRenderer={(player) => player}
           tagInputProps={{
             onRemove: (player, index) => {
-              setSelectedPlayers(selectedPlayers.filter((p) => p !== player));
+              const newSelectedPlayers = new Set(selectedPlayers);
+
+              newSelectedPlayers.delete(`${player}`);
+
+              setSelectedPlayers(newSelectedPlayers);
             },
           }}
           itemsEqual={(a, b) => a === b}
@@ -32,7 +69,7 @@ export const MultiPlayerSelector = observer((props: MultiPlayerSelectorProps) =>
             player.toLowerCase().includes(query.toLowerCase())
           }
           placeholder="Select players..."
-          onClear={() => setSelectedPlayers([])}
+          onClear={() => setSelectedPlayers(new Set())}
           resetOnSelect={true}
           popoverProps={{ minimal: true }}
           menuProps={{
@@ -46,14 +83,3 @@ export const MultiPlayerSelector = observer((props: MultiPlayerSelectorProps) =>
     </ClassNames>
   );
 });
-
-const itemRenderer = (player: string, { handleClick, modifiers }: ItemRendererProps) => {
-  return (
-    <MenuItem
-      key={player}
-      text={player}
-      onClick={handleClick}
-      active={modifiers.active}
-    />
-  );
-};

@@ -25,7 +25,7 @@ import { FlexColumn } from '../components/base/Flex';
 import { MultiPlayerSelector } from '../components/MultiPlayerSelector';
 import { BaseViewModel, useViewModelConstructor } from '../utils/mobx/ViewModel';
 import { makeSimpleAutoObservable } from '../utils/mobx';
-import { absolute, flex1, fullSize, fullWidth, relative } from '../styles';
+import { absolute, flex1, fullSize, fullWidth, padding, relative } from '../styles';
 import { ZoomPluginOptions } from 'chartjs-plugin-zoom/types/options';
 import { ChartJSOrUndefined } from 'react-chartjs-2/dist/types';
 import { Button } from '@blueprintjs/core';
@@ -88,7 +88,7 @@ const options: ChartOptions<'line'> = {
     x: {
       type: 'time',
       time: {
-        unit: 'day',
+        unit: 'month',
       },
       title: {
         display: true,
@@ -109,9 +109,9 @@ const options: ChartOptions<'line'> = {
 };
 
 export class RootViewModel extends BaseViewModel {
-  selectedPlayers: string[] = [];
+  selectedPlayers: Set<string> = new Set();
 
-  setSelectedPlayers(players: string[]) {
+  setSelectedPlayers(players: Set<string>) {
     this.selectedPlayers = players;
   }
 
@@ -134,8 +134,7 @@ export const Root = observer(() => {
         datasets: playerHistory
           .filter(
             (instance) =>
-              vm.selectedPlayers.includes(instance.player) ||
-              vm.selectedPlayers.length === 0,
+              vm.selectedPlayers.has(instance.player) || vm.selectedPlayers.size === 0,
           )
           .map((historyInstance) => {
             const color = playerToColor(historyInstance.player);
@@ -168,13 +167,15 @@ export const Root = observer(() => {
   return (
     <div css={[absolute(0, 0, 0, 0)]}>
       <FlexColumn css={[fullSize]} alignItems="center">
-        {appModel.players && (
-          <MultiPlayerSelector
-            players={appModel.players}
-            selectedPlayers={vm.selectedPlayers}
-            setSelectedPlayers={vm.setSelectedPlayers}
-          />
-        )}
+        <div css={padding('md')}>
+          {appModel.players && (
+            <MultiPlayerSelector
+              players={appModel.players}
+              selectedPlayers={vm.selectedPlayers}
+              setSelectedPlayers={vm.setSelectedPlayers}
+            />
+          )}
+        </div>
         <div css={[flex1, fullWidth, relative()]}>
           <div css={[absolute(0, 0, 0, 0), { overflow: 'hidden' }]}>
             <Button

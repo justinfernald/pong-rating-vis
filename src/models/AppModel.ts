@@ -36,11 +36,15 @@ export class AppModel {
       players.add(match.p2);
     }
 
-    return Array.from(players);
+    return new Set(Array.from(players).sort());
+  }
+
+  get playersArray() {
+    return Array.from(this.players || []);
   }
 
   indexOfPlayer(player: string) {
-    return this.players?.indexOf(player);
+    return this.playersArray?.indexOf(player);
   }
 
   get rankings() {
@@ -62,7 +66,7 @@ export class AppModel {
 
     this.eloCalculator.calculateElo(this.filteredMatches);
 
-    const players = this.players;
+    const players = this.playersArray;
 
     if (!players) {
       return null;
