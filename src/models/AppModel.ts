@@ -1,16 +1,25 @@
 import { createContext, useContext } from 'react';
 import { DataModel } from './DataModel';
 import { DAY_IN_MS, EloCalculator } from './EloCalculator';
-import { makeAutoObservable } from 'mobx';
+import { autorun, makeAutoObservable } from 'mobx';
+import { Player } from '../components/PlayerDataTable';
 
 export class AppModel {
   dataModel = new DataModel();
-  eloCalculator = new EloCalculator();
+  eloCalculator = new EloCalculator(this.filteredMatches ?? []);
 
   constructor() {
     makeAutoObservable(this, {}, { autoBind: true });
 
+    this.setup();
+  }
+
+  setup() {
     this.dataModel.fetchData();
+
+    autorun(() => {
+      this.eloCalculator = new EloCalculator(this.filteredMatches ?? []);
+    });
   }
 
   get filteredMatches() {
@@ -43,8 +52,21 @@ export class AppModel {
     return Array.from(this.players || []);
   }
 
-  indexOfPlayer(player: string) {
-    return this.playersArray?.indexOf(player);
+  playerInfo(playerName: string): Player {
+    return {
+      name: playerName,
+      ranking:
+        this.rankings?.find((ranking) => ranking.player === playerName)?.score ??
+        Infinity,
+      losses: this.eloCalculator.getLosses(playerName),
+      wins: this.eloCalculator.getWins(playerName),
+      rating: this.eloCalculator.getRating(playerName),
+      startDate: this.eloCalculator.getStartDate(playerName),
+    };
+  }
+
+  indexOfPlayer(playerName: string) {
+    return this.playersArray?.indexOf(playerName);
   }
 
   get rankings() {
@@ -52,7 +74,7 @@ export class AppModel {
       return null;
     }
 
-    const ratings = this.eloCalculator.calculateElo(this.filteredMatches);
+    const ratings = this.eloCalculator.ratings;
 
     return Object.entries(ratings)
       .map(([player, score]) => ({ player, score }))
@@ -60,12 +82,6 @@ export class AppModel {
   }
 
   get playerHistory() {
-    if (!this.filteredMatches) {
-      return null;
-    }
-
-    this.eloCalculator.calculateElo(this.filteredMatches);
-
     const players = this.playersArray;
 
     if (!players) {
@@ -80,6 +96,27 @@ export class AppModel {
     }));
 
     return playerHistory;
+  }
+
+  get playerData(): Player[] {
+    const players = this.playersArray;
+    const rankings = this.rankings;
+
+    if (!players || !rankings) {
+      return [];
+    }
+
+    return players.map((player) => {
+      return {
+        name: player,
+        ranking:
+          (rankings.findIndex((ranking) => ranking.player === player) ?? Infinity) + 1,
+        losses: this.eloCalculator.getLosses(player),
+        wins: this.eloCalculator.getWins(player),
+        rating: Math.round(this.eloCalculator.getRating(player)),
+        startDate: this.eloCalculator.getStartDate(player),
+      };
+    });
   }
 }
 

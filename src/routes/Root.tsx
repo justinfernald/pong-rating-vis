@@ -21,14 +21,15 @@ import zoomPlugin from 'chartjs-plugin-zoom';
 import { generateColor } from '../utils/colors';
 import { useMemo, useRef } from 'react';
 import { globalAppModel } from '../App';
-import { FlexColumn } from '../components/base/Flex';
-import { MultiPlayerSelector } from '../components/MultiPlayerSelector';
 import { BaseViewModel, useViewModelConstructor } from '../utils/mobx/ViewModel';
 import { makeSimpleAutoObservable } from '../utils/mobx';
-import { absolute, flex1, fullSize, fullWidth, padding, relative } from '../styles';
+import { absolute, flexCenter, fullSize, padding, relative } from '../styles';
 import { ZoomPluginOptions } from 'chartjs-plugin-zoom/types/options';
 import { ChartJSOrUndefined } from 'react-chartjs-2/dist/types';
-import { Button } from '@blueprintjs/core';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { IconButton } from '@mui/material';
+import { CropFree, DragIndicator } from '@mui/icons-material';
+import { PlayerDataTable, PlayerDataTableViewModel } from '../components/PlayerDataTable';
 
 ChartJS.register(
   CategoryScale,
@@ -108,22 +109,29 @@ const options: ChartOptions<'line'> = {
   },
 };
 
-export class RootViewModel extends BaseViewModel {
-  selectedPlayers: Set<string> = new Set();
+export interface RootViewModelProps {
+  dataTableVm: PlayerDataTableViewModel;
+}
 
-  setSelectedPlayers(players: Set<string>) {
-    this.selectedPlayers = players;
+export class RootViewModel extends BaseViewModel<RootViewModelProps> {
+  get selectedPlayers() {
+    return this.props.dataTableVm.selectedPlayers;
   }
 
-  constructor() {
-    super();
+  constructor(props: RootViewModelProps) {
+    super(props);
     makeSimpleAutoObservable(this, {}, { autoBind: true });
   }
 }
 
 export const Root = observer(() => {
-  const vm = useViewModelConstructor(RootViewModel);
   const appModel = useAppModel();
+  const dataTableVm = useViewModelConstructor(PlayerDataTableViewModel, {
+    appModel,
+  });
+  const vm = useViewModelConstructor(RootViewModel, {
+    dataTableVm,
+  });
   const playerHistory = appModel.playerHistory;
 
   const lineChartRef = useRef<ChartJSOrUndefined<'line'>>(null);
@@ -166,29 +174,35 @@ export const Root = observer(() => {
 
   return (
     <div css={[absolute(0, 0, 0, 0)]}>
-      <FlexColumn css={[fullSize]} alignItems="center">
-        <div css={padding('md')}>
-          {appModel.players && (
-            <MultiPlayerSelector
+      <PanelGroup css={[fullSize]} direction="vertical">
+        <Panel collapsible defaultSize={50} minSize={20}>
+          <div css={[fullSize, relative()]}>
+            <div css={[absolute(0, 0, 0, 0), { overflow: 'hidden' }]}>
+              <IconButton
+                css={[absolute(2, 2), { position: 'absolute !important' as any }]}
+                onClick={onResetZoom}
+              >
+                <CropFree />
+              </IconButton>
+
+              <Line ref={lineChartRef} data={data} options={options} />
+            </div>
+          </div>
+        </Panel>
+        <ResizeHandle />
+        <Panel collapsible defaultSize={50} minSize={20}>
+          <div css={[fullSize, padding('md'), relative(), { overflow: 'hidden' }]}>
+            {/* {appModel.players && (
+              <MultiPlayerSelector
               players={appModel.players}
               selectedPlayers={vm.selectedPlayers}
               setSelectedPlayers={vm.setSelectedPlayers}
-            />
-          )}
-        </div>
-        <div css={[flex1, fullWidth, relative()]}>
-          <div css={[absolute(0, 0, 0, 0), { overflow: 'hidden' }]}>
-            <Button
-              css={[absolute(4, 4)]}
-              minimal
-              icon="zoom-to-fit"
-              onClick={onResetZoom}
-            />
-
-            <Line ref={lineChartRef} data={data} options={options} />
+              />
+              )} */}
+            <PlayerDataTable viewModel={dataTableVm} />
           </div>
-        </div>
-      </FlexColumn>
+        </Panel>
+      </PanelGroup>
     </div>
   );
 });
@@ -198,3 +212,44 @@ export const playerToColor = (player: string) => {
 
   return generateColor(index * 11);
 };
+
+export function ResizeHandle({
+  className = '',
+  collapsed = false,
+  id,
+}: {
+  className?: string;
+  collapsed?: boolean;
+  id?: string;
+}) {
+  return (
+    <PanelResizeHandle
+      className={className}
+      css={{
+        margin: 4,
+        borderRadius: 4,
+        height: 14,
+        backgroundColor: '#f1f1f1',
+        transition: '0.3s ease-in-out',
+        '&:hover': {
+          backgroundColor: '#e4e4e4',
+        },
+        '&:active': {
+          backgroundColor: '#c5c5c5',
+        },
+      }}
+      id={id}
+    >
+      <div
+        css={[
+          flexCenter,
+          fullSize,
+          { transform: 'perspective(1px) scale(0.8) rotate(90deg)' },
+        ]}
+        data-collapsed={collapsed || undefined}
+      >
+        <DragIndicator css={{ color: '#979797' }} />
+      </div>
+    </PanelResizeHandle>
+  );
+}

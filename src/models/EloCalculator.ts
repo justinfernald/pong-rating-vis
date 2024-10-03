@@ -4,14 +4,16 @@ import { Match } from '../types';
 export const DAY_IN_MS = 1000 * 60 * 60 * 24;
 
 export class EloCalculator {
-  constructor(private K = 50, private decayFactor = 1) {
+  constructor(matches: Match[], private K = 50, private decayFactor = 1) {
     makeAutoObservable(this, {}, { autoBind: true });
+
+    this.calculateElo(matches);
   }
 
-  private ratings: Record<string, number> = {};
+  ratings: Record<string, number> = {};
   private history: Record<string, { match: Match; rating: number }[]> = {};
 
-  private getRating(player: string): number {
+  getRating(player: string): number {
     if (!this.ratings[player]) {
       this.ratings[player] = 1000; // Default Elo rating
     }
@@ -53,17 +55,35 @@ export class EloCalculator {
     this.recordHistory(match.p2, match);
   }
 
-  calculateElo(matches: Match[]): Record<string, number> {
+  private calculateElo(matches: Match[]) {
     const currentTime = Date.now();
 
     for (const match of matches) {
       this.processMatch(match, currentTime);
     }
-
-    return this.ratings;
   }
 
   getPlayerHistory(player: string): { match: Match; rating: number }[] {
     return this.history[player] || [];
+  }
+
+  getLosses(player: string): number {
+    return this.getPlayerHistory(player).filter(
+      (instance) => instance.match[instance.match.winner] !== player,
+    ).length;
+  }
+
+  getWins(player: string): number {
+    return this.getPlayerHistory(player).filter(
+      (instance) => instance.match[instance.match.winner] === player,
+    ).length;
+  }
+
+  getStartDate(player: string): number {
+    return Math.min(
+      ...this.getPlayerHistory(player).map(
+        (historyInstance) => historyInstance.match.date,
+      ),
+    );
   }
 }
